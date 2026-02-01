@@ -4,6 +4,13 @@ import { useStore } from '../../shared/hooks/useStore';
 import { sortByDate, calcDailyDeltas } from '../../modules/weight/utils/calculations';
 import { formatDateHebrew } from '../../shared/utils/date-helpers';
 
+const CONDITION_LABELS: Record<string, string> = {
+  morning_fasted: 'בוקר לפני אכילה',
+  during_day: 'במהלך היום',
+  post_workout: 'אחרי אימון',
+  other: 'אחר',
+};
+
 export function History() {
   const { entries, deleteWeightEntry } = useStore();
   const sorted = useMemo(() => sortByDate(entries).reverse(), [entries]);
@@ -11,7 +18,6 @@ export function History() {
   const deltas = useMemo(() => calcDailyDeltas(forwardSorted), [forwardSorted]);
 
   const getDelta = (index: number) => {
-    // index in reversed array -> forward index = sorted.length - 1 - index
     const fwdIdx = sorted.length - 1 - index;
     if (fwdIdx <= 0) return null;
     return deltas[fwdIdx - 1];
@@ -23,18 +29,25 @@ export function History() {
       <p className="text-text-muted text-sm">{entries.length} מדידות</p>
 
       {sorted.length === 0 ? (
-        <Card>
-          <p className="text-text-secondary text-center py-8">אין מדידות עדיין</p>
+        <Card className="text-center py-8">
+          <p className="text-text-secondary mb-2">אין מדידות עדיין</p>
+          <p className="text-text-muted text-sm">חזור לדשבורד כדי להזין את המדידה הראשונה</p>
         </Card>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2" role="list" aria-label="רשימת שקילות">
           {sorted.map((entry, i) => {
             const delta = getDelta(i);
             return (
-              <Card key={entry.id} className="flex items-center justify-between !py-3">
+              <Card key={entry.id} className="flex items-center justify-between !py-3 animate-fade-in" role="listitem">
                 <div>
                   <div className="text-text-primary font-inter font-bold">{entry.weightKg} ק&quot;ג</div>
                   <div className="text-text-muted text-xs">{formatDateHebrew(entry.date)}</div>
+                  {entry.bodyFatPct && (
+                    <div className="text-text-muted text-xs">שומן: {entry.bodyFatPct}%</div>
+                  )}
+                  {entry.measurementConditions && (
+                    <div className="text-text-muted text-xs">{CONDITION_LABELS[entry.measurementConditions] || entry.measurementConditions}</div>
+                  )}
                   {entry.note && <div className="text-text-muted text-xs mt-1">{entry.note}</div>}
                 </div>
                 <div className="flex items-center gap-3">
@@ -47,8 +60,8 @@ export function History() {
                   )}
                   <button
                     onClick={() => deleteWeightEntry(entry.date)}
-                    className="text-text-muted hover:text-danger text-xs"
-                    aria-label="מחק"
+                    className="text-text-muted hover:text-danger text-xs transition-colors"
+                    aria-label={`מחק מדידה מתאריך ${formatDateHebrew(entry.date)}`}
                   >
                     מחק
                   </button>
